@@ -12,6 +12,17 @@ def load_data(file_path,clip=False):
 	dat = pd.read_csv(file_path,header=None,index_col=None)	
 	return {"reviews":dat[1].tolist(),"labels":pd.to_numeric(dat[0],downcast='integer').tolist()}
 
+# def trim_data(data,cc):
+# 	rev = data['reviews']
+# 	lab = data['labels']
+# 	trimmed = {'reviews':[],'labels':[]}
+# 	for i in range(1,6):
+# 		n = int(cc[i-1])
+# 		tmp = [rev[j] for j in range(len(rev)) if lab[j] == i]
+# 		trimmed['reviews'] += (np.random.choice(tmp,n)).tolist()
+# 		trimmed['labels'] += [i for j in range(n)]
+# 	return trimmed
+
 def get_tokens(review):
 	try:
 		# tokens = [x for x in review.split(' ')]
