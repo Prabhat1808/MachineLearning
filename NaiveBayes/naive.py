@@ -8,13 +8,14 @@ TRAIN_FILE = "../../col341_a2_data/amazon_train.csv"
 TEST_FILE = "../../col341_a2_data/amazon_test_public.csv"
 RE1 = "\w+"
 
-def load_data(file_path):
-	dat = pd.read_csv(file_path,header=None,index_col=None)
+def load_data(file_path,clip=False):
+	dat = pd.read_csv(file_path,header=None,index_col=None)	
 	return {"reviews":dat[1].tolist(),"labels":pd.to_numeric(dat[0],downcast='integer').tolist()}
 
 def get_tokens(review):
 	try:
-		tokens = [x for x in review.split(' ')]
+		# tokens = [x for x in review.split(' ')]
+		tokens = [x for x in re.findall(RE1,review)]
 	except:
 		tokens = []
 	return tokens
@@ -53,14 +54,16 @@ def predict(review,model,vocab,inv_vocab):
 	prob = np.zeros(len(cc))
 	words = get_tokens(review)
 	for label in range(len(cc)):
-		tmp = math.log(cc[label]/tot)
+		tmp = np.log(cc[label]/tot)
+		# tmp = 0
 		den = cc[label] + len(vocab) + 1
+		# den = cc[label] +  1
 		for word in words:
 			try:
-				occurence = cc[label][inv_vocab[word]]
+				occurence = wc[label][inv_vocab[word]]
 			except:
 				occurence = 0
-			tmp += math.log((occurence+1)/den)
+			tmp += np.log((occurence+1)/den)
 		prob[label] = tmp
 	return np.argmax(prob)+1
 
