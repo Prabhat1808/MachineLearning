@@ -11,6 +11,9 @@ TRAIN_FILE = "../../col341_a2_data/amazon_train.csv"
 TEST_FILE = "../../col341_a2_data/amazon_test_public.csv"
 RE1 = "\w+"
 STOP = set(stopwords.words('english'))
+with open('ranksnl_large.txt',"r") as fl:
+    STOP2=set(fl.read().split())
+STOPLEV2 = False
 SNOW = SnowballStemmer("english")
 
 def load_data(file_path,clip=False):
@@ -22,7 +25,10 @@ def filter_data(data,remove_stopwords,stemming):
 	rev = data['reviews']
 	filtered = []
 	for line in rev:
-		words = get_tokens(line.lower())
+		#Stop more
+		words = [x for x in re.findall(RE1,line.lower())]
+		if (STOPLEV2):
+			words = list(set(words) - STOP2)
 		# filtered_line = [SNOW.stem(w) for w in words if not w in STOP]
 		if (remove_stopwords and stemming):
 			filtered_line = [SNOW.stem(w) for w in words if not w in STOP]
@@ -46,27 +52,20 @@ def trim_data(data,cc,minval):
 		trimmed['labels'] += [i for j in range(n)]
 	return trimmed
 
-def get_tokens(review):
-# 	try:
-		# tokens = [x for x in review.split(' ')]
+def get_tokens(review,n_grams):
 	tokens = [x for x in re.findall(RE1,review)]
-	# except:
-	# 	tokens = []
+	if(n_grams == 2):
+		tokens = nltk.bigrams(tokens)
+	if(n_grams == 3):
+		tokens = nltk.trigrams(tokens)
 	return tokens
 
 def create_vocabulary(data,n_grams=1):
 	vocab = set()
 	for review in data:
-		words = get_tokens(review)
-		if (n_grams == 1):
-			for word in words:
-				vocab.add(word)
-		elif (n_grams == 2):
-			for word in nltk.bigrams(words):
-				vocab.add(word)
-		elif (n_grams == 3):
-			for word in nltk.trigrams(words):
-				vocab.add(word)
+		words = get_tokens(review,n_grams=n_grams)
+		for word in words:
+			vocab.add(word)
 
 	return list(vocab)
 
@@ -78,21 +77,16 @@ def train_model(data,vocab,inv_vocab,n_grams=1):
 	labels = data["labels"]
 	cc = np.zeros(len(set(labels)))
 	wc = np.zeros((len(set(labels)),len(vocab)))
+	# wf = {vocab[i]:0 for i in range((len(vocab)))}
 	for i in range(len(labels)):
 		tmp = np.zeros(len(vocab))
 		rev = reviews[i]
 		lab = labels[i]
 		cc[lab-1] += 1
-		words = get_tokens(rev)
-		if (n_grams == 1):
-			for word in words:
-				tmp[inv_vocab[word]] = 1
-		elif (n_grams == 2):
-			for word in nltk.bigrams(words):
-				tmp[inv_vocab[word]] = 1
-		elif (n_grams == 3):
-			for word in nltk.trigrams(words):
-				tmp[inv_vocab[word]] = 1
+		words = get_tokens(rev,n_grams=n_grams)
+		for word in words:
+			tmp[inv_vocab[word]] = 1
+			# wf[word] += 1
 		wc[lab-1] += tmp
 	return {"cc":cc,"wc":wc}
 
@@ -100,15 +94,10 @@ def predict(review,model,vocab,inv_vocab,n_grams=1):
 	cc = model["cc"]
 	tot = np.sum(cc)
 	wc = model["wc"]
+	# wf = model["wf"]
 	# norm = np.divide(wc,(np.sum(wc,axis=1)).reshape((5,1)))
 	prob = np.zeros(len(cc))
-	words = []
-	if (n_grams == 1):
-		words = get_tokens(review)
-	elif (n_grams == 2):
-		words = nltk.bigrams(get_tokens(review))
-	elif (n_grams == 3):
-		words = nltk.trigrams(get_tokens(review))
+	words = get_tokens(review,n_grams=n_grams)
 
 	for label in range(len(cc)):
 		tmp = np.log(cc[label]/tot)
@@ -118,12 +107,13 @@ def predict(review,model,vocab,inv_vocab,n_grams=1):
 		for word in words:
 			try:
 				occurence = wc[label][inv_vocab[word]]
-				# occurence = norm[label][inv_vocab[word]]
+				# occurence = wc[label][inv_vocab[word]]/wf[word]
 			except:
 				occurence = 0
 			tmp += np.log((occurence+1)/den)
 		prob[label] = tmp
 	return np.argmax(prob)+1
+
 
 train_data = load_data(TRAIN_FILE)
 test_data = load_data(TEST_FILE)
@@ -135,17 +125,22 @@ test_data = load_data(TEST_FILE)
 
 stopstem = [(False,False),(False,True),(True,False),(True,True)]
 gram = [1,2,3]
+stop2 = [True,False]
 for i in range(4):
 	stop = stopstem[i][0]
 	stem = stopstem[i][1]
 	print ("STOP :",stop,"\nSTEM :",stem,"\n---------")
-	train_n = filter_data(train_data,stop,stem)
-	test_n = filter_data(test_data,stop,stem)
-	for j in range(3):
-		print ("GRAMS: ",j+1)
-		vocab = create_vocabulary(train_n['reviews'],n_grams=j)
-		inv_vocab = invert_vocab(vocab)
-		model = train_model(train_n,vocab,inv_vocab,n_grams=j)
-		predictions = [int(predict(rev,model,vocab,inv_vocab,n_grams=j)) for rev in test_n["reviews"]]
-		print (np.bincount(predictions))
+	for k in range(2):
+		STOPLEV2 = stop2[k]
+		print ("STOP2 : ",STOPLEV2)
+		train_n = filter_data(train_data,stop,stem)
+		test_n = filter_data(test_data,stop,stem)
+		for j in range(3):
+			print ("GRAMS: ",j+1)
+			vocab = create_vocabulary(train_n['reviews'],n_grams=j)
+			inv_vocab = invert_vocab(vocab)
+			model = train_model(train_n,vocab,inv_vocab,n_grams=j)
+			predictions = [int(predict(rev,model,vocab,inv_vocab,n_grams=j)) for rev in test_n["reviews"]]
+			print (np.bincount(predictions))
+			np.savetxt("test_preds/"+str(i)+""+str(k)+""+str(j)+".txt",predictions,fmt="%i")
 # predictions = [int(predict(rev,model,vocab,inv_vocab)) for rev in test_n["reviews"]]
