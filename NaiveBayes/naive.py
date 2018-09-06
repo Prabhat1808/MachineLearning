@@ -90,6 +90,23 @@ def train_model(data,vocab,inv_vocab,n_grams=1):
 		wc[lab-1] += tmp
 	return {"cc":cc,"wc":wc}
 
+def train_model_freq(data,vocab,inv_vocab,n_grams=1):
+	reviews = data["reviews"]
+	labels = data["labels"]
+	cc = np.zeros(len(set(labels)))
+	wc = np.zeros((len(set(labels)),len(vocab)))
+	ls = np.zeros(len(set(labels)))
+	# wf = {vocab[i]:0 for i in range((len(vocab)))}
+	for i in range(len(labels)):
+		rev = reviews[i]
+		lab = labels[i]
+		cc[lab-1] += 1
+		words = get_tokens(rev,n_grams=n_grams)
+		for word in words:
+			wc[lab-1][inv_vocab[word]] += 1
+			ls[lab-1] += 1
+	return {"cc":cc,"wc":wc,"ls":ls}
+
 def predict(review,model,vocab,inv_vocab,n_grams=1):
 	cc = model["cc"]
 	tot = np.sum(cc)
@@ -114,6 +131,31 @@ def predict(review,model,vocab,inv_vocab,n_grams=1):
 		prob[label] = tmp
 	return np.argmax(prob)+1
 
+def predict_freq(review,model,vocab,inv_vocab,n_grams=1):
+	cc = model["cc"]
+	tot = np.sum(cc)
+	wc = model["wc"]
+	ls = model["ls"]
+	# wf = model["wf"]
+	# norm = np.divide(wc,(np.sum(wc,axis=1)).reshape((5,1)))
+	prob = np.zeros(len(cc))
+	words = get_tokens(review,n_grams=n_grams)
+
+	for label in range(len(cc)):
+		tmp = np.log(cc[label]/tot)
+		# tmp = 0
+		den = ls[label] + len(vocab) + 1
+		lc = wc[label]
+		# den = cc[label] +  1
+		for word in words:
+			try:
+				freq = lc[inv_vocab[word]]
+				# occurence = wc[label][inv_vocab[word]]/wf[word]
+			except:
+				freq = 0
+			tmp += np.log((freq+1)/den)
+		prob[label] = tmp
+	return np.argmax(prob)+1
 
 train_data = load_data(TRAIN_FILE)
 test_data = load_data(TEST_FILE)
@@ -139,8 +181,8 @@ for i in range(4):
 			print ("GRAMS: ",j+1)
 			vocab = create_vocabulary(train_n['reviews'],n_grams=j)
 			inv_vocab = invert_vocab(vocab)
-			model = train_model(train_n,vocab,inv_vocab,n_grams=j)
-			predictions = [int(predict(rev,model,vocab,inv_vocab,n_grams=j)) for rev in test_n["reviews"]]
+			model = train_model_freq(train_n,vocab,inv_vocab,n_grams=j)
+			predictions = [int(predict_freq(rev,model,vocab,inv_vocab,n_grams=j)) for rev in test_n["reviews"]]
 			print (np.bincount(predictions))
-			np.savetxt("test_preds/"+str(i)+""+str(k)+""+str(j)+".txt",predictions,fmt="%i")
+			np.savetxt("test_preds_freq/"+str(i)+""+str(k)+""+str(j)+".txt",predictions,fmt="%i")
 # predictions = [int(predict(rev,model,vocab,inv_vocab)) for rev in test_n["reviews"]]
