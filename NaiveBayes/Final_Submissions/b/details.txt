@@ -1,0 +1,12 @@
+STOPWORDS2 = NO
+
+PORTER = 48.479
+SNOWBALL = 48.288
+
+STOPWORDS2 = YES
+
+PORTER = 50.173
+SNOWBALL = 50.062
+
+WITHOUT_STEMMING = 50.797
+(Stemming is harmful. Removing stemming increases accuracy all the time)
