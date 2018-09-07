@@ -62,15 +62,15 @@ main()
 
 
     if [ $status == "OK" ]; then
-        part="a"
-        echo -e "\nEvaluating Part $part"
-        time run "$fname" "$part" "$data_folder_path/amazon_train.csv" "$data_folder_path/amazon_test.csv" "$stud_folder_path/predictions_naive_$part"
-        compute_score "$compute_accuracy" "$data_folder_path/amazon_target_labels.txt" "$stud_folder_path/predictions_naive_$part" "$stud_folder_path/result_naive_$part" 
+        # part="a"
+        # echo -e "\nEvaluating Part $part"
+        # time run "$fname" "$part" "$data_folder_path/amazon_train.csv" "$data_folder_path/amazon_test.csv" "$stud_folder_path/predictions_naive_$part"
+        # compute_score "$compute_accuracy" "$data_folder_path/amazon_target_labels.txt" "$stud_folder_path/predictions_naive_$part" "$stud_folder_path/result_naive_$part" 
 
-        part="b"
-        echo -e "\nEvaluating Part $part"
-        time run "$fname" "$part" "$data_folder_path/amazon_train.csv" "$data_folder_path/amazon_test.csv" "$stud_folder_path/predictions_naive_$part"
-        compute_score "$compute_accuracy" "$data_folder_path/amazon_target_labels.txt" "$stud_folder_path/predictions_naive_$part" "$stud_folder_path/result_naive_$part" 
+        # part="b"
+        # echo -e "\nEvaluating Part $part"
+        # time run "$fname" "$part" "$data_folder_path/amazon_train.csv" "$data_folder_path/amazon_test.csv" "$stud_folder_path/predictions_naive_$part"
+        # compute_score "$compute_accuracy" "$data_folder_path/amazon_target_labels.txt" "$stud_folder_path/predictions_naive_$part" "$stud_folder_path/result_naive_$part" 
         
         part="c"
         echo -e "\nEvaluating Part $part"
