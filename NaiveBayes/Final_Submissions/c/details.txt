@@ -1,0 +1,37 @@
+All operations are performed after removing stopwords(NLTK + Other)
+Note: Not using stemming, the time decreases substantially
+
+Following are the results, with and without stemming
+BIGRAMS: [    0     0     0     0     0 16176]
+TRIGRAMS: [    0     0     0     0     0 16176]
+Thus, features such as bigrams and trigrams aren't of much use
+
+TF-IDF:
+
+divide each word freq in each class by the total freq of that word
+model['ls'] = sum of freq of words in that class
+array([   0,  322,  256, 2459, 4516, 8623]) -- 48.473
+
+proper method---
+STOPLEV2 = True
+array([    0,   100,    11,   131,  3871, 12063]) -- 53.40
+STOPELEV2 = False
+array([    0,    31,     3,    34,  2734, 13374]) -- 53.59
+
+ON TRAIN SET - 
+PREDICTED - array([    0,   293,    54,   388,  5461, 26156]) : STOPLEV2 = True -- 0.6743632542037586
+PREDICTED - array([    0,   139,    16,   119,  3786, 28292]) : STOPLEV2 = False -- 0.6237945103857567
+ACTUAL - array([    0,  1395,  1505,  3394,  8268, 17790])
+
+
+word_count = sum of tf-idf values in all docs belonging to that class
+tot_word_in_class = sum of tf-idf weights of all words in that class
+But the new distribution is skewed towards class '5' and class '4' and even then the accuracy is not much. This means that there are a lot of examples belonging to other classes, which are classified in '4' or '5'.
+
+Still, the better accuracy of the first case indicates that it classifies examples correctly to some extent.
+
+
+
+
+
+
