@@ -178,35 +178,31 @@ def remove_padding(data):
 		a = a + ((data[:,(i*32)+2:(i+1)*32 - 2]),)
 	return (np.column_stack(a))
 
-train = pd.read_csv("../dummy_evaluation/data/devnagri_train.csv",header=None).values
-test = pd.read_csv("../dummy_evaluation/data/devnagri_test.csv",header=None).values
-# print (train.shape)
-# print (test.shape)
-x_train = normalize(train[:,1:])
-x_test = normalize(test[:,1:])
-y_train = train[:,:1]
-y_test = pd.read_csv('../dummy_evaluation/data/devnagri_target_labels.txt',header=None).values
-one_hot = (LabelBinarizer()).fit(y_train)
-y_train = one_hot.transform(y_train)
-# y_test = one_hot.transform(y_test)
-x_train = remove_padding(x_train)
-x_test = remove_padding(x_test)
+# train = pd.read_csv("../dummy_evaluation/data/devnagri_train.csv",header=None).values
+# test = pd.read_csv("../dummy_evaluation/data/devnagri_test.csv",header=None).values
+# # print (train.shape)
+# # print (test.shape)
+# x_train = normalize(train[:,1:])
+# x_test = normalize(test[:,1:])
+# y_train = train[:,:1]
+# y_test = pd.read_csv('../dummy_evaluation/data/devnagri_target_labels.txt',header=None).values
+# one_hot = (LabelBinarizer()).fit(y_train)
+# y_train = one_hot.transform(y_train)
+# # y_test = one_hot.transform(y_test)
+# x_train = remove_padding(x_train)
+# x_test = remove_padding(x_test)
 
-# x_tr = [x.reshape((784,1)) for x in x_train]
-# x_ts = [x.reshape((784,1)) for x in x_test]
-# y_tr = [y.reshape((46,1)) for y in y_train]
-# y_ts = [y.reshape((46,1)) for y in y_test]
+# # x_tr = [x.reshape((784,1)) for x in x_train]
+# # x_ts = [x.reshape((784,1)) for x in x_test]
+# # y_tr = [y.reshape((46,1)) for y in y_train]
+# # y_ts = [y.reshape((46,1)) for y in y_test]
 
-train_data = (x_train,y_train)
-test_data = (x_test,y_test)
+# train_data = (x_train,y_train)
+# test_data = (x_test,y_test)
 
 # net = neural_net(784,[100],46,activation = 'tanh')
 # net.train(train_data,51,512,2,evaluation_data=test_data,monitor_evaluation_accuracy=True,monitor_training_cost=True)
 # pred = net.predict(x_test)
-
-net = neural_net(x_train.shape[1],[100],y_train.shape[1],activation='sigmoid')
-	# net.train(train_data,50,bs,lr)
-net.train(train_data,50,128,2,evaluation_data=test_data,monitor_evaluation_accuracy=True)
 
 arguments = sys.argv
 part = arguments[1]
@@ -214,16 +210,16 @@ tr = arguments[2]
 ts = arguments[3]
 outfile = arguments[4]
 
-# train = pd.read_csv(tr,header=None).values
-# test = pd.read_csv(ts,header=None).values
-# x_train = remove_padding(normalize(train[:,1:]))
-# x_test = remove_padding(normalize(test[:,1:]))
+train = pd.read_csv(tr,header=None).values
+test = pd.read_csv(ts,header=None).values
+x_train = remove_padding(normalize(train[:,1:]))
+x_test = remove_padding(normalize(test[:,1:]))
 
-# y_train = train[:,:1]
-# one_hot = (LabelBinarizer()).fit(y_train)
-# y_train = one_hot.transform(y_train)
+y_train = train[:,:1]
+one_hot = (LabelBinarizer()).fit(y_train)
+y_train = one_hot.transform(y_train)
 
-# train_data = (x_train,y_train)
+train_data = (x_train,y_train)
 
 #512 0.01 "sigmoid" 100
 if part == 'a':
@@ -234,13 +230,6 @@ if part == 'a':
 	for l in range(8,len(arguments)):
 		hl.append(int(arguments[l]))
 	net = neural_net(x_train.shape[1],hl,y_train.shape[1],activation=ac)
-	# net = neural_net(x_train.shape[1],hl,y_train.shape[1],activation='tanh',evaluation_data=test_data)
 	net.train(train_data,50,bs,lr)
-	# net.train(train_data,50,bs,10)
 	pred = net.predict(x_test)
 	np.savetxt(outfile,pred,fmt="%i")
-
-if part =='b':
-	net =neural_net(x_train.shape[1],[100],y_train.shape[1],activation='sigmoid')
-
-# if part == 'c':
