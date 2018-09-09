@@ -3,7 +3,7 @@ import pandas as pd
 import random
 import sys
 from scipy.special import expit
-from sklearn.preprocessing import LabelBinarizer, normalize
+from sklearn.preprocessing import LabelBinarizer, normalize, StandardScaler
 from sklearn.metrics import accuracy_score
 import math
 
@@ -178,12 +178,17 @@ def remove_padding(data):
 		a = a + ((data[:,(i*32)+2:(i+1)*32 - 2]),)
 	return (np.column_stack(a))
 
-train = pd.read_csv("../dummy_evaluation/data/devnagri_train.csv",header=None).values
+train = pd.read_csv("../../col341_a2_data/devnagri_train.csv",header=None).values
+
 test = pd.read_csv("../dummy_evaluation/data/devnagri_test.csv",header=None).values
 # print (train.shape)
 # print (test.shape)
-x_train = normalize(train[:,1:])
-x_test = normalize(test[:,1:])
+# x_train = normalize(train[:,1:])
+# x_test = normalize(test[:,1:])
+SS = StandardScaler()
+x_train = SS.fit_transform(train[:,1:])
+print (x_train.shape)
+x_test = SS.transform(test[:,1:])
 y_train = train[:,:1]
 y_test = pd.read_csv('../dummy_evaluation/data/devnagri_target_labels.txt',header=None).values
 one_hot = (LabelBinarizer()).fit(y_train)
@@ -204,9 +209,9 @@ test_data = (x_test,y_test)
 # net.train(train_data,51,512,2,evaluation_data=test_data,monitor_evaluation_accuracy=True,monitor_training_cost=True)
 # pred = net.predict(x_test)
 
-net = neural_net(x_train.shape[1],[100],y_train.shape[1],activation='sigmoid')
+net = neural_net(x_train.shape[1],[100,100],y_train.shape[1],activation='sigmoid')
 	# net.train(train_data,50,bs,lr)
-net.train(train_data,50,128,2,evaluation_data=test_data,monitor_evaluation_accuracy=True)
+net.train(train_data,100,128,2,evaluation_data=test_data,monitor_evaluation_accuracy=True)
 
 arguments = sys.argv
 part = arguments[1]
