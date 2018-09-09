@@ -21,8 +21,7 @@ class neural_net():
 		if (self.activation == 'tanh'):
 			val = np.tanh(inp)
 		if (self.activation == 'relu'):
-			if inp > 0:
-				val = inp
+			val = np.maximum(inp,0)
 		return val
 
 	def derivate(self,inp):
@@ -32,10 +31,10 @@ class neural_net():
 		if (self.activation == 'tanh'):
 			val = 1 - np.tanh(inp)**2
 		if (self.activation == 'relu'):
-			if inp <= 0:
-				val = 0
-			else:
-				val = 1
+			val = inp
+			val[inp<=0] = 0
+			val[inp>0] = 1
+			# val = inp
 		return val
 
 	def feedforward(self,example):
@@ -50,10 +49,12 @@ class neural_net():
 		return curr
 
 	def calcCost(self,a,y):
-		return (np.linalg.norm(a-y)**2)/2
+		return (np.linalg.norm(a-y)**2)
 
 	def delta(self,z,a,y):
-		return (a-y)*(expit(z)*(1-expit(z)))
+		# print (z.shape)
+		# print (a.shape)
+		return (a-y)*(self.derivate(z))
 
 	def get_node_vals(self,x,y):
 		a = x
@@ -68,100 +69,100 @@ class neural_net():
 			acts.append(a)
 		return (acts,zs)
 
-	def train(self,training_data,epochs,mini_batch_size,eta,evaluation_data=None,monitor_evaluation_cost=False,monitor_evaluation_accuracy=False,monitor_training_cost=False,monitor_training_accuracy=False):
+	# def train(self,training_data,epochs,mini_batch_size,eta,evaluation_data=None,monitor_evaluation_cost=False,monitor_evaluation_accuracy=False,monitor_training_cost=False,monitor_training_accuracy=False):
 		
-		if evaluation_data:
-			x_test = evaluation_data[0]
-			y_test = evaluation_data[1]
-			n_data = len(x_test)
+	# 	if evaluation_data:
+	# 		x_test = evaluation_data[0]
+	# 		y_test = evaluation_data[1]
+	# 		n_data = len(x_test)
 
-		x_train = training_data[0]
-		y_train = training_data[1]
+	# 	x_train = training_data[0]
+	# 	y_train = training_data[1]
 
-		n = len(x_train)
-		batches = int(n/mini_batch_size)
+	# 	n = len(x_train)
+	# 	batches = int(n/mini_batch_size)
 		
-		evaluation_cost, evaluation_accuracy = [], []
-		training_cost, training_accuracy = [], []
-		prev_loss = 0
-		k = 0
-		eta_eff = eta
+	# 	evaluation_cost, evaluation_accuracy = [], []
+	# 	training_cost, training_accuracy = [], []
+	# 	prev_loss = 0
+	# 	k = 0
+	# 	eta_eff = eta
 
-		for j in range(epochs):
-			print (eta_eff)
-			for i in range(batches-1):
-				x_tr = x_train[i*mini_batch_size:(i+1)*mini_batch_size]
-				y_tr = y_train[i*mini_batch_size:(i+1)*mini_batch_size]
-				self.gradient_descent((x_tr,y_tr), eta_eff) # check this
+	# 	for j in range(epochs):
+	# 		print (eta_eff)
+	# 		for i in range(batches-1):
+	# 			x_tr = x_train[i*mini_batch_size:(i+1)*mini_batch_size]
+	# 			y_tr = y_train[i*mini_batch_size:(i+1)*mini_batch_size]
+	# 			self.gradient_descent((x_tr,y_tr), eta_eff) # check this
 
-			curr_loss = self.total_cost(list(zip(x_tr,y_tr)))
-			if(curr_loss > prev_loss):
-				k += 1
-				eta_eff = eta/math.sqrt(k)
-			prev_loss = curr_loss
+	# 		curr_loss = self.total_cost(list(zip(x_tr,y_tr)))
+	# 		if(curr_loss > prev_loss):
+	# 			k += 1
+	# 			eta_eff = eta/math.sqrt(k)
+	# 		prev_loss = curr_loss
 				
-			print ("Epoch ",j," training complete")
+	# 		print ("Epoch ",j," training complete")
 
-			if monitor_training_cost:
-				cost = curr_loss
-				training_cost.append(cost)
-				print ("Cost on training data: ", cost)
-			if monitor_training_accuracy:
-				accuracy = self.accuracy(list(zip(x_train,y_train)))
-				training_accuracy.append(accuracy)
-				print ("Accuracy on training data: ",accuracy,"/",n)			
-			if monitor_evaluation_cost:
-				cost = self.total_cost(list(zip(x_test,y_test)))
-				evaluation_cost.append(cost)
-				print ("Cost on evaluation data:",cost)
-			if monitor_evaluation_accuracy:
-				accuracy = self.accuracy(list(zip(x_test,y_test)))
-				evaluation_accuracy.append(accuracy)
-				print ("Accuracy on evaluation data: ",accuracy,"/",n_data)
-		return evaluation_cost, evaluation_accuracy,training_cost, training_accuracy
+	# 		if monitor_training_cost:
+	# 			cost = curr_loss
+	# 			training_cost.append(cost)
+	# 			print ("Cost on training data: ", cost)
+	# 		if monitor_training_accuracy:
+	# 			accuracy = self.accuracy(list(zip(x_train,y_train)))
+	# 			training_accuracy.append(accuracy)
+	# 			print ("Accuracy on training data: ",accuracy,"/",n)			
+	# 		if monitor_evaluation_cost:
+	# 			cost = self.total_cost(list(zip(x_test,y_test)))
+	# 			evaluation_cost.append(cost)
+	# 			print ("Cost on evaluation data:",cost)
+	# 		if monitor_evaluation_accuracy:
+	# 			accuracy = self.accuracy(list(zip(x_test,y_test)))
+	# 			evaluation_accuracy.append(accuracy)
+	# 			print ("Accuracy on evaluation data: ",accuracy,"/",n_data)
+	# 	return evaluation_cost, evaluation_accuracy,training_cost, training_accuracy
 
-	def gradient_descent(self, batch, eta):
+	# def gradient_descent(self, batch, eta):
 		
-		x_tr = batch[0]
-		y_tr = batch[1]
-		n = len(x_tr)
-		tmp_b = [np.zeros(b.shape) for b in self.biases]
-		tmp_w = [np.zeros(w.shape) for w in self.weights]
+	# 	x_tr = batch[0]
+	# 	y_tr = batch[1]
+	# 	n = len(x_tr)
+	# 	tmp_b = [np.zeros(b.shape) for b in self.biases]
+	# 	tmp_w = [np.zeros(w.shape) for w in self.weights]
 
-		for i in range(n):
-			x = x_tr[i]
-			y = y_tr[i]
-			derivs = self.backpropagation(x, y)
-			db = derivs[0]
-			dw = derivs[1]
-			for j in range(len(tmp_b)):
-				tmp_b[j] = tmp_b[j] + db[j]
-				tmp_w[j] = tmp_w[j] + dw[j]
-		for i in range(len(tmp_b)):
-			self.weights[i] = self.weights[i] - (2*eta/n)*tmp_w[i]
-			self.biases[i] = self.biases[i] - (2*eta/n)*tmp_b[i]
+	# 	for i in range(n):
+	# 		x = x_tr[i]
+	# 		y = y_tr[i]
+	# 		derivs = self.backpropagation(x, y)
+	# 		db = derivs[0]
+	# 		dw = derivs[1]
+	# 		for j in range(len(tmp_b)):
+	# 			tmp_b[j] = tmp_b[j] + db[j]
+	# 			tmp_w[j] = tmp_w[j] + dw[j]
+	# 	for i in range(len(tmp_b)):
+	# 		self.weights[i] = self.weights[i] - (2*eta/n)*tmp_w[i]
+	# 		self.biases[i] = self.biases[i] - (2*eta/n)*tmp_b[i]
 
-	def backpropagation(self, x, y):
+	# def backpropagation(self, x, y):
 
-		node_vals = self.get_node_vals(x,y)
-		acts = node_vals[0]
-		zs = node_vals[1]
+	# 	node_vals = self.get_node_vals(x,y)
+	# 	acts = node_vals[0]
+	# 	zs = node_vals[1]
 
-		db = [np.zeros(b.shape) for b in self.biases]
-		dw = [np.zeros(w.shape) for w in self.weights]
-		# Final Layer--always sigmoid
-		delta = self.delta(zs[-1], acts[-1], y.reshape((46,1)))
-		db[-1] = delta
-		dw[-1] = np.dot(delta, acts[-2].transpose())
+	# 	db = [np.zeros(b.shape) for b in self.biases]
+	# 	dw = [np.zeros(w.shape) for w in self.weights]
+	# 	# Final Layer--always sigmoid
+	# 	delta = self.delta(zs[-1], acts[-1], y.reshape((46,1)))
+	# 	db[-1] = delta
+	# 	dw[-1] = np.dot(delta, acts[-2].transpose())
 
-		for l in range(len(self.layers)):
-			if(l > 1):
-				delta = np.dot(self.weights[-l+1].transpose(), delta) * (self.derivate(zs[-l]))
-				db[-l] = delta
-				dw[-l] = np.dot(delta, acts[-l-1].transpose())
+	# 	for l in range(len(self.layers)):
+	# 		if(l > 1):
+	# 			delta = np.dot(self.weights[-l+1].transpose(), delta) * (self.derivate(zs[-l]))
+	# 			db[-l] = delta
+	# 			dw[-l] = np.dot(delta, acts[-l-1].transpose())
 
-		derivs = (db,dw)
-		return derivs
+	# 	derivs = (db,dw)
+	# 	return derivs
 
 	def accuracy(self, data):
 		results = [(np.argmax(self.feedforward(x)), np.argmax(y)) for (x, y) in data]
@@ -189,7 +190,7 @@ class neural_net():
 		return dsum
 
 
-	def train2(self,training_data,epochs,mini_batch_size,eta,evaluation_data=None,monitor_evaluation_cost=False,monitor_evaluation_accuracy=False,monitor_training_cost=False,monitor_training_accuracy=False):
+	def train(self,training_data,epochs,mini_batch_size,eta,evaluation_data=None,monitor_evaluation_cost=False,monitor_evaluation_accuracy=False,monitor_training_cost=False,monitor_training_accuracy=False):
 		
 		if evaluation_data:
 			x_test = evaluation_data[0]
@@ -214,7 +215,7 @@ class neural_net():
 				x_tr = x_train[i*mini_batch_size:(i+1)*mini_batch_size,:]
 				y_tr = y_train[i*mini_batch_size:(i+1)*mini_batch_size,:]
 				# print ("Iteration :", i)
-				self.gradient_descent2((x_tr,y_tr), eta_eff) # check this
+				self.gradient_descent((x_tr,y_tr), eta_eff) # check this
 
 			# curr_loss = self.total_cost(list(zip(x_tr,y_tr)))
 			# if(curr_loss > prev_loss):
@@ -242,7 +243,7 @@ class neural_net():
 				print ("Accuracy on evaluation data: ",accuracy,"/",n_data)
 		return evaluation_cost, evaluation_accuracy,training_cost, training_accuracy
 
-	def gradient_descent2(self, batch, eta):
+	def gradient_descent(self, batch, eta):
 		
 		x_tr = batch[0]
 		y_tr = batch[1]
@@ -250,7 +251,7 @@ class neural_net():
 		tmp_b = [np.zeros(b.shape) for b in self.biases]
 		tmp_w = [np.zeros(w.shape) for w in self.weights]
 
-		derivs = self.backpropagation2(x_tr,y_tr)
+		derivs = self.backpropagation(x_tr,y_tr)
 		db = derivs[0]
 		dw = derivs[1]
 		# for i in range(n):
@@ -266,7 +267,7 @@ class neural_net():
 			self.weights[i] = self.weights[i] - (2*eta/n)*tmp_w[i]
 			self.biases[i] = self.biases[i] - (2*eta/n)*tmp_b[i]
 
-	def backpropagation2(self, x, y):
+	def backpropagation(self, x, y):
 
 		# node_vals = self.get_node_vals(x,y)
 		# print (len(self.layers))
@@ -337,5 +338,5 @@ y_ts = [y.reshape((46,1)) for y in y_test]
 train_data = (x_train,y_train)
 test_data = (x_ts,y_ts)
 
-net = neural_net(1024,[100],46,activation = 'sigmoid')
-net.train2(train_data,51,512,0.5,evaluation_data=test_data,monitor_evaluation_accuracy=True,monitor_evaluation_cost=True,monitor_training_accuracy=True,monitor_training_cost=True)
+net = neural_net(1024,[100],46,activation = 'tanh')
+net.train(train_data,51,512,0.5,evaluation_data=test_data,monitor_evaluation_accuracy=True,monitor_evaluation_cost=True,monitor_training_accuracy=True,monitor_training_cost=True)
