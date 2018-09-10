@@ -6,6 +6,12 @@ from scipy.special import expit
 from sklearn.preprocessing import LabelBinarizer, normalize, StandardScaler
 from sklearn.metrics import accuracy_score
 import math
+####FOR part C
+from skimage.filters import gabor
+from skimage import data, io
+# from skimage.feature import hog
+# from skimage import data, exposure
+# from skimage.restoration import (denoise_wavelet, estimate_sigma)
 
 class neural_net():
 
@@ -81,7 +87,7 @@ class neural_net():
 		return dsum
 
 
-	def train(self,training_data,epochs,batch_size,eta,evaluation_data=None,monitor_evaluation_accuracy=False,monitor_training_cost=False):
+	def train(self,training_data,epochs,batch_size,eta,evaluation_data=None,check_accuracy=False):
 		
 		if evaluation_data:
 			x_test = evaluation_data[0]
@@ -100,7 +106,7 @@ class neural_net():
 		parity = 0
 
 		for j in range(epochs):
-			print (eta_eff)
+			# print (eta_eff)
 			curr_loss = 0
 			for i in range(batches-1):
 				if (i%2 == parity):
@@ -113,9 +119,9 @@ class neural_net():
 			prev_loss[parity] = curr_loss
 			parity = (parity+1)%2
 				
-			print ("Epoch ",j," training complete: ",curr_loss)
+			# print ("Epoch ",j," training complete: ",curr_loss)
 
-			if monitor_evaluation_accuracy:
+			if check_accuracy:
 				accuracy = self.accuracy(x_test,y_test)
 				print ("Accuracy on evaluation data: ",accuracy)
 
@@ -178,40 +184,6 @@ def remove_padding(data):
 		a = a + ((data[:,(i*32)+2:(i+1)*32 - 2]),)
 	return (np.column_stack(a))
 
-# train = pd.read_csv("../../col341_a2_data/devnagri_train.csv",header=None).values
-
-# test = pd.read_csv("../dummy_evaluation/data/devnagri_test.csv",header=None).values
-# # print (train.shape)
-# # print (test.shape)
-# x_train = normalize(train[:,1:])
-# x_test = normalize(test[:,1:])
-# SS = StandardScaler()
-# x_train = SS.fit_transform(train[:,1:].astype(float))
-# print (x_train.shape)
-# x_test = SS.transform(test[:,1:])
-# y_train = train[:,:1]
-# y_test = pd.read_csv('../dummy_evaluation/data/devnagri_target_labels.txt',header=None).values
-# one_hot = (LabelBinarizer()).fit(y_train)
-# y_train = one_hot.transform(y_train)
-# # y_test = one_hot.transform(y_test)
-# x_train = remove_padding(x_train)
-# x_test = remove_padding(x_test)
-
-# # x_tr = [x.reshape((784,1)) for x in x_train]
-# # x_ts = [x.reshape((784,1)) for x in x_test]
-# # y_tr = [y.reshape((46,1)) for y in y_train]
-# # y_ts = [y.reshape((46,1)) for y in y_test]
-
-# train_data = (x_train,y_train)
-# test_data = (x_test,y_test)
-
-# # net = neural_net(784,[100],46,activation = 'tanh')
-# # net.train(train_data,51,512,2,evaluation_data=test_data,monitor_evaluation_accuracy=True,monitor_training_cost=True)
-# # pred = net.predict(x_test)
-
-# net = neural_net(x_train.shape[1],[100,100],y_train.shape[1],activation='sigmoid')
-# 	# net.train(train_data,50,bs,lr)
-# net.train(train_data,100,128,2,evaluation_data=test_data,monitor_evaluation_accuracy=True)
 
 arguments = sys.argv
 part = arguments[1]
@@ -250,4 +222,16 @@ if part =='b':
 	pred = net.predict(x_test)
 	np.savetxt(outfile,pred,fmt="%i")
 
-# if part == 'c':
+if part == 'c':
+	x_tmp = [x.reshape((28,28)) for x in x_train]
+	gabort = [(gabor(x,frequency=0.9)[0]).ravel() for x in x_tmp]
+	x_train = np.stack(gabort)
+
+	x_tmps = [x.reshape((28,28)) for x in x_test]
+	gabors = [(gabor(x,frequency=0.9)[0]).ravel() for x in x_tmps]
+	x_test = np.stack(gabors)
+
+	net = neural_net(x_train.shape[1],[100,100],y_train.shape[1],activation='sigmoid')
+	net.train((x_train,y_train),50,128,2)
+	pred = net.predict(x_test)
+	np.savetxt(outfile,pred,fmt="%i")
