@@ -1,0 +1,9 @@
+99.3 -> [16] -> [32] -> [64]  :  Adam
+99.217 -> [[32],[32]] -> [[64],[64]]  :  Adam
+98.812 -> [32],[32]] -> [[64],[64]]  :  Nadam
+97.797 -> [32],[32]] -> [[64],[64]]  :  OPTrms with annealer
+99.232 -> [16] -> [32] -> [64]  :  Adam with annealing
+99.364 -> [16] -> [32] -> [64]  :  Adam with annealing and augmentation
+temp -> [16] -> [[32],[32]] -> [64]  :  Adam with annealing and augmentation
+
+Check data augmentation

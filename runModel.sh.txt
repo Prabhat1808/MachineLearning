@@ -1,0 +1,5 @@
+#!/bin/bash
+
+# activated conda environment command here....
+
+# python HPC_version.py
