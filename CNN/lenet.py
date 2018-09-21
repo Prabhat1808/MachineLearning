@@ -2,7 +2,7 @@ from keras.models import Sequential
 from keras.layers.convolutional import Conv2D, MaxPooling2D
 from keras.layers.core import Activation, Flatten, Dense
 from keras.layers import Dropout
-from keras.optimizers import SGD
+from keras.optimizers import SGD, Adam
 from keras.utils import np_utils
 from keras import backend as K
 import numpy as np
@@ -21,24 +21,30 @@ class lenet:
 			inputShape = (numChannels, imgRows, imgCols)
 
 		# define the first set of CONV => ACTIVATION => POOL layers
-		model.add(Conv2D(20, 5, padding="same",	input_shape=inputShape))
-		model.add(Dropout(0.25))
+		model.add(Conv2D(16, 3, padding="same",	input_shape=inputShape))
+		# model.add(Dropout(0.25))
 		model.add(Activation(activation))
 		model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-		# model.add(Dropout(0.25))
+		model.add(Dropout(0.25))
 
 		# define the second set of CONV => ACTIVATION => POOL layers
-		model.add(Conv2D(50, 5, padding="same"))
-		model.add(Dropout(0.25))
+		model.add(Conv2D(32, 3, padding="same"))
+		# model.add(Dropout(0.25))
 		model.add(Activation(activation))
 		model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+		model.add(Dropout(0.25))
+
+		model.add(Conv2D(64, 3, padding="same"))
 		# model.add(Dropout(0.25))
+		model.add(Activation(activation))
+		model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
+		model.add(Dropout(0.25))
 
 		# define the first FC => ACTIVATION layers
 		model.add(Flatten())
 		model.add(Dense(500))
-		model.add(Dropout(0.5))
 		model.add(Activation(activation))
+		model.add(Dropout(0.5))		
 		# model.add(Dropout(0.25))
 
 		# define the second FC layer
@@ -68,9 +74,11 @@ y_tr = np_utils.to_categorical(train[:,0])
 x_ts = test[:,1:].reshape(test.shape[0],32,32,1).astype('float32')/255
 
 opt = SGD(lr=0.01)
+opt_adam = Adam()
 model = lenet.build(numChannels=1, imgRows=32, imgCols=32, numClasses=46,weightsPath=None)
 print("[INFO] compiling model...")
-model.compile(loss="categorical_crossentropy", optimizer=opt,metrics=["accuracy"])
+# model.compile(loss="categorical_crossentropy", optimizer=opt,metrics=["accuracy"])
+model.compile(loss="categorical_crossentropy", optimizer=opt_adam,metrics=["accuracy"])
 
 print("[INFO] training...")
 model.fit(x_tr, y_tr, batch_size=128, epochs=100,verbose=1)
