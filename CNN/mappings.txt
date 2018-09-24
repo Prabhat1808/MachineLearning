@@ -4,6 +4,7 @@
 97.797 -> [32],[32]] -> [[64],[64]]  :  OPTrms with annealer
 99.232 -> [16] -> [32] -> [64]  :  Adam with annealing
 99.364 -> [16] -> [32] -> [64]  :  Adam with annealing and augmentation
-temp -> [16] -> [[32],[32]] -> [64]  :  Adam with annealing and augmentation
+99.159 -> [32] -> [32] -> [64]  :  Adam with annealing and augmentation
+
 
 Check data augmentation

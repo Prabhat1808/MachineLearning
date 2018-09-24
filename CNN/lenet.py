@@ -11,54 +11,31 @@ import sys
 
 class lenet:
 	@staticmethod
-	def build(numChannels, imgRows, imgCols, numClasses,activation="relu", weightsPath=None):
-		# initialize the model
+	def build(rows, cols, numClasses,activation="relu"):
 		model = Sequential()
-		inputShape = (imgRows, imgCols, numChannels)
+		inputShape = (rows, cols, 1)
 
-		# if we are using "channels first", update the input shape
 		if K.image_data_format() == "channels_first":
-			inputShape = (numChannels, imgRows, imgCols)
+			inputShape = (1, rows, cols)
 
-		# define the first set of CONV => ACTIVATION => POOL layers
-		model.add(Conv2D(16, 3, padding="same",	input_shape=inputShape))
-		# model.add(Dropout(0.25))
-		model.add(Activation(activation))
+		model.add(Conv2D(16, 3, padding="same",	input_shape=inputShape,activation='relu'))
 		model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 		model.add(Dropout(0.25))
 
-		# define the second set of CONV => ACTIVATION => POOL layers
-		model.add(Conv2D(32, 3, padding="same"))
-		# model.add(Dropout(0.25))
-		model.add(Activation(activation))
+		model.add(Conv2D(32, 3, padding="same",activation='relu'))
 		model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 		model.add(Dropout(0.25))
 
-		model.add(Conv2D(64, 3, padding="same"))
-		# model.add(Dropout(0.25))
-		model.add(Activation(activation))
+		model.add(Conv2D(64, 3, padding="same",activation='relu'))
 		model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 		model.add(Dropout(0.25))
 
-		# define the first FC => ACTIVATION layers
 		model.add(Flatten())
-		model.add(Dense(500))
-		model.add(Activation(activation))
-		model.add(Dropout(0.5))		
-		# model.add(Dropout(0.25))
-
-		# define the second FC layer
+		model.add(Dense(500,activation='relu'))
+		model.add(Dropout(0.5))
 		model.add(Dense(numClasses))
-
-		# lastly, define the soft-max classifier
 		model.add(Activation("softmax"))
 
-		# if a weights path is supplied (inicating that the model was
-		# pre-trained), then load the weights
-		if weightsPath is not None:
-			model.load_weights(weightsPath)
-
-		# return the constructed network architecture
 		return model
 
 arguments = sys.argv
@@ -75,7 +52,7 @@ x_ts = test[:,1:].reshape(test.shape[0],32,32,1).astype('float32')/255
 
 opt = SGD(lr=0.01)
 opt_adam = Adam()
-model = lenet.build(numChannels=1, imgRows=32, imgCols=32, numClasses=46,weightsPath=None)
+model = lenet.build(32, 32, 46)
 print("[INFO] compiling model...")
 # model.compile(loss="categorical_crossentropy", optimizer=opt,metrics=["accuracy"])
 model.compile(loss="categorical_crossentropy", optimizer=opt_adam,metrics=["accuracy"])

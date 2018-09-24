@@ -13,67 +13,32 @@ import sys
 
 class lenet:
 	@staticmethod
-	def build(numChannels, imgRows, imgCols, numClasses,activation="relu", weightsPath=None):
-		# initialize the model
+	def build(numChannels, rows, cols, classes,activation="relu"):
 		model = Sequential()
-		inputShape = (imgRows, imgCols, numChannels)
+		inputShape = (rows, cols, numChannels)
 
-		# if we are using "channels first", update the input shape
 		if K.image_data_format() == "channels_first":
-			inputShape = (numChannels, imgRows, imgCols)
+			inputShape = (numChannels, rows, cols)
 
-		# define the first set of CONV => ACTIVATION => POOL layers
-		model.add(Conv2D(16, 3, padding="same",	input_shape=inputShape))
-		# model.add(Dropout(0.25))
-		model.add(Activation(activation))
+		model.add(Conv2D(16, 3, padding="same",	input_shape=inputShape,activation='relu'))
 		model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 		model.add(Dropout(0.25))
 
-		# define the second set of CONV => ACTIVATION => POOL layers
-		######################################
-		model.add(Conv2D(32, 3, padding="same"))
-		# model.add(Dropout(0.25))
-		model.add(Activation(activation))
+		model.add(Conv2D(32, 3, padding="same",activation='relu'))
 		model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-
-		# model.add(Conv2D(32, 3, padding="same"))
-		# # model.add(Dropout(0.25))
-		# model.add(Activation(activation))
-		# model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-		#######################################
 		model.add(Dropout(0.25))
 
-		#######################################
-		model.add(Conv2D(64, 3, padding="same"))
-		# model.add(Dropout(0.25))
-		model.add(Activation(activation))
+		model.add(Conv2D(64, 3, padding="same",activation='relu'))
 		model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-		# model.add(Conv2D(64, 3, padding="same"))
-		# # model.add(Dropout(0.25))
-		# model.add(Activation(activation))
-		# model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-		########################################
 		model.add(Dropout(0.25))
 
-		# define the first FC => ACTIVATION layers
 		model.add(Flatten())
-		model.add(Dense(500))
-		model.add(Activation(activation))
+		model.add(Dense(500,activation='relu'))
 		model.add(Dropout(0.5))		
-		# model.add(Dropout(0.25))
 
-		# define the second FC layer
-		model.add(Dense(numClasses))
-
-		# lastly, define the soft-max classifier
+		model.add(Dense(classes))
 		model.add(Activation("softmax"))
 
-		# if a weights path is supplied (inicating that the model was
-		# pre-trained), then load the weights
-		if weightsPath is not None:
-			model.load_weights(weightsPath)
-
-		# return the constructed network architecture
 		return model
 
 arguments = sys.argv
@@ -97,25 +62,19 @@ opt_nadam = Nadam()
 augment = ImageDataGenerator(rotation_range=10,zoom_range = 0.1,width_shift_range=0.1,height_shift_range=0.1)
 augment.fit(x_tr)
 ###############CALLBACKS#################
-annealer = ReduceLROnPlateau(monitor='val_loss', patience=3, verbose=1, factor=0.5, min_lr=0.00001)
-early_stopper = EarlyStopping(monitor='val_loss', patience=6, verbose=1, mode='auto')
+annealer = ReduceLROnPlateau(patience=3, verbose=1, factor=0.5, min_lr=0.00001)
+early_stopper = EarlyStopping(patience=6, verbose=1, mode='auto')
 ########################################
 
 
-model = lenet.build(numChannels=1, imgRows=32, imgCols=32, numClasses=46,weightsPath=None)
-print("[INFO] compiling model...")
+model = lenet.build(1,32,32,46)
 # model.compile(loss="categorical_crossentropy", optimizer=opt,metrics=["accuracy"])
 model.compile(loss="categorical_crossentropy", optimizer=opt_adam,metrics=["accuracy"])
 # model.compile(loss="categorical_crossentropy", optimizer=opt_rms,metrics=["accuracy"])
 # model.compile(loss="categorical_crossentropy", optimizer=opt_nadam,metrics=["accuracy"])
 
-print("[INFO] training...")
 # model.fit(x_tr, y_tr, batch_size=128, epochs=100,verbose=1, callbacks=[annealer])
 model.fit_generator(augment.flow(x_tr, y_tr, batch_size=128), epochs=100,verbose=1, callbacks=[annealer])
-
-# print("[INFO] evaluating on training data...")
-# (loss, accuracy) = model.evaluate(x_tr, y_tr, batch_size=128, verbose=1)
-# print("[INFO] accuracy: {:.2f}%".format(accuracy * 100))
 
 pred = model.predict_classes(x_ts)
 np.savetxt(outfile,pred,fmt="%i")

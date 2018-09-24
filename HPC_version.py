@@ -80,8 +80,8 @@ def downsample(img):
 # In[3]:
 
 
-train_df = pd.read_csv("input/input/train.csv", index_col="id", usecols=[0])
-depths_df = pd.read_csv("input/input/depths.csv", index_col="id")
+train_df = pd.read_csv("input/train.csv", index_col="id", usecols=[0])
+depths_df = pd.read_csv("input/depths.csv", index_col="id")
 train_df = train_df.join(depths_df)
 test_df = depths_df[~depths_df.index.isin(train_df.index)]
 
@@ -92,13 +92,13 @@ test_df = depths_df[~depths_df.index.isin(train_df.index)]
 # In[4]:
 
 
-train_df["images"] = [np.array(load_img("input/input/train/images/{}.png".format(idx), grayscale=True)) / 255 for idx in train_df.index]
+train_df["images"] = [np.array(load_img("input/train/images/{}.png".format(idx), grayscale=True)) / 255 for idx in train_df.index]
 
 
 # In[5]:
 
 
-train_df["masks"] = [np.array(load_img("input/input/train/masks/{}.png".format(idx), grayscale=True)) / 255 for idx in train_df.index]
+train_df["masks"] = [np.array(load_img("input/train/masks/{}.png".format(idx), grayscale=True)) / 255 for idx in train_df.index]
 
 
 # # Calculating the salt coverage and salt coverage classes
@@ -517,7 +517,7 @@ def RLenc(img, order='F', format=True):
 # In[ ]:
 
 
-x_test = np.array([upsample(np.array(load_img("input/input/test/images/{}.png".format(idx), grayscale=True))) / 255 for idx in test_df.index]).reshape(-1, img_size_target, img_size_target, 1)
+x_test = np.array([upsample(np.array(load_img("input/test/images/{}.png".format(idx), grayscale=True))) / 255 for idx in test_df.index]).reshape(-1, img_size_target, img_size_target, 1)
 
 
 # In[ ]:
