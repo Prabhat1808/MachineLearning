@@ -49,7 +49,7 @@ class neural_net():
 		curr = example
 		for i in range(self.width-1):
 			w = self.weights[i]
-			b = self.biases[i]			
+			b = self.biases[i]
 			if(i == len(self.layers)-2):
 				curr = expit(np.dot(w,curr)+b)
 			else:
@@ -88,7 +88,7 @@ class neural_net():
 
 
 	def train(self,training_data,epochs,batch_size,eta,evaluation_data=None,check_accuracy=False):
-		
+
 		if evaluation_data:
 			x_test = evaluation_data[0]
 			y_test = evaluation_data[1]
@@ -118,7 +118,7 @@ class neural_net():
 				eta_eff = eta/math.sqrt(k)
 			prev_loss[parity] = curr_loss
 			parity = (parity+1)%2
-				
+
 			# print ("Epoch ",j," training complete: ",curr_loss)
 
 			if check_accuracy:
@@ -211,14 +211,21 @@ if part == 'a':
 	hl = []
 	for l in range(8,len(arguments)):
 		hl.append(int(arguments[l]))
+	iter = 0
+	if(ac == 'sigmoid'):
+		iter = 1000
+	if(ac == 'relu'):
+		iter = 300
+	if(ac == 'tanh'):
+		iter = 300
 	net = neural_net(x_train.shape[1],hl,y_train.shape[1],activation=ac)
-	net.train(train_data,75,bs,lr)
+	net.train(train_data,iter,bs,lr)
 	pred = net.predict(x_test)
 	np.savetxt(outfile,pred,fmt="%i")
 
 if part =='b':
 	net = neural_net(x_train.shape[1],[100,100],y_train.shape[1],activation='sigmoid')
-	net.train(train_data,90,128,2)
+	net.train(train_data,360,128,2)
 	pred = net.predict(x_test)
 	np.savetxt(outfile,pred,fmt="%i")
 
@@ -232,6 +239,6 @@ if part == 'c':
 	x_test = np.stack(gabors)
 
 	net = neural_net(x_train.shape[1],[100,100],y_train.shape[1],activation='sigmoid')
-	net.train((x_train,y_train),50,128,2)
+	net.train((x_train,y_train),200,128,2)
 	pred = net.predict(x_test)
 	np.savetxt(outfile,pred,fmt="%i")
