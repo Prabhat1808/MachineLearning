@@ -7,15 +7,25 @@ model = tree.DecisionTreeClassifier()
 TR_DIR = "COL341_DecisionTree_data/train.csv"
 VAL_DIR = "COL341_DecisionTree_data/valid.csv"
 TS_DIR = "COL341_DecisionTree_data/test.csv"
-DISCRETE = [' Work Class',' Education',' Marital Status',' Occupation',' Relationship',' Race',' Sex',' Native Country']
-CONTINUOUS = [' Age',' Fnlwgt',' Education Number',' Capital Gain',' Capital Loss',' Hour per Week']
+DISCRETE = ['Work Class','Education','Marital Status','Occupation','Relationship','Race','Sex','Native Country']
+CONTINUOUS = ['Age','Fnlwgt','Education Number','Capital Gain','Capital Loss','Hour per Week']
 
 tr = pd.read_csv(TR_DIR)
 val = pd.read_csv(VAL_DIR)
+tr_cols = tr.columns
+val_cols = val.columns
+
+for i in range(len(tr_cols)):
+    tr.rename(columns={tr_cols[i]:tr_cols[i].lstrip().rstrip()},inplace=True)
+
+for i in range(len(val_cols)):
+    val.rename(columns={val_cols[i]:val_cols[i].lstrip().rstrip()},inplace=True)
 
 for var in DISCRETE:
     tr[var] = tr[var].astype('category')
     tr[var] = tr[var].cat.codes
+    val[var] = val[var].astype('category')
+    val[var] = val[var].cat.codes
 
 def calcEntropyLabels(labels):
     val_count = (labels.value_counts()).values
@@ -32,8 +42,8 @@ def calcEntropyFeatures(column, threshold):
     less = sum(column < threshold)
     more = n - less
     entropy = 0.0
-    entropy -= (less/n)log((less/n),2)
-    entropy -= (more/n)log((more/n),2)
+    entropy -= (less/n)*log((less/n),2)
+    entropy -= (more/n)*log((more/n),2)
     return entropy
 
 def infoGain(data, feature_name, threshold):

@@ -1,0 +1,23 @@
+## Binary
+### Grow
+Max accuracy:
+Train: 0.9116666666666666
+Val: 0.81
+Test: 0.8194285714285714
+### Prune
+Max accuracy:
+Train: 0.9116666666666666
+Val: 0.8443333333333334
+Test: 0.8267142857142857
+
+## Numerical
+### Grow
+Max accuracy:
+Train: 0.9999629629629629
+Val: 0.8046666666666666
+Test: 0.817
+### Prune
+Max accuracy:
+Train: 0.9999629629629629
+Val: 0.8386666666666667
+Test: 0.8200000000000001
