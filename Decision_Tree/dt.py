@@ -29,12 +29,15 @@ for var in DISCRETE:
 
 def calcEntropyLabels(labels):
     val_count = (labels.value_counts()).values
+    # print (val_count)
+    # print ('YOOYOO')
     tot = sum(val_count)
     count = len(val_count)
     entropy = 0.0
+    # print (tot)
     for val in val_count:
         tmp = (val/tot)
-        entropy -= tmp*log(tmp,count)
+        entropy -= tmp*math.log(tmp,2)
     return entropy
 
 def calcEntropyFeatures(column, threshold):
@@ -42,36 +45,51 @@ def calcEntropyFeatures(column, threshold):
     less = sum(column < threshold)
     more = n - less
     entropy = 0.0
-    entropy -= (less/n)*log((less/n),2)
-    entropy -= (more/n)*log((more/n),2)
+    entropy -= (less/n)*math.log((less/n),2)
+    entropy -= (more/n)*math.log((more/n),2)
     return entropy
 
 def infoGain(data, feature_name, threshold):
     n = data.shape[0]
-    less = data.loc[data['feature_name'] < threshold]
+    less = data.loc[data[feature_name] < threshold]
     n_less = less.shape[0]
-    more = data.loc[data['feature_name'] >= threshold]
+    more = data.loc[data[feature_name] >= threshold]
     n_more = more.shape[0]
-    gain = calcEntropy(data[' Rich?'])
-    gain -= (n_less/n)*calcEntropy(less[' Rich?'])
-    gain -= (n_more/n)*calcEntropy(more[' Rich?'])
+    gain = calcEntropyLabels(data['Rich?'])
+    if(n_less != 0):
+        # print ("Caaling function less")
+        # print (threshold)
+        # print (n_less)
+        gain -= (n_less/n)*calcEntropyLabels(less['Rich?'])
+    if(n_more != 0):
+        # print ("Caaling function more")
+        # print (threshold)
+        # print (n_more)
+        gain -= (n_more/n)*calcEntropyLabels(more['Rich?'])
     return gain
 
 def gainRatio(data, feature_name, threshold):
     return (infoGain(data,feature_name,threshold)/calcEntropyFeatures(data[feature_name],threshold))
 
 def candidateThresholds(data, feature_name):
-    sorted = (data.sort_values([feature_name], ascending=True)).values
-    labels = sorted[0]
-    vals = sorted[1]
+    sorted = (data[['Rich?',feature_name]].sort_values([feature_name], ascending=True)).values
+    # df1 = df[['a','b']]
+    # print ("YOOYOO")
+    # print (sorted)
+    labels = sorted[:,0]
+    # print (labels)
+    vals = sorted[:,1]
+    # print (vals)
     th = set()
     for i in range(len(labels)-2):
         if(labels[i]!=labels[i+1]):
+            # print ('Diff')
             th.add((vals[i]+vals[i+1])/2)
     return list(th)
 
 def computeThreshold(data, feature_name):
     candidates = candidateThresholds(data,feature_name)
+    # print ("Candidates : ",candidates)
     best_th = 0.0
     max_gain = 0.0
     for th in candidates:
@@ -79,9 +97,12 @@ def computeThreshold(data, feature_name):
         if i > max_gain:
             max_gain = i
             best_th = th
-    return th
+    return best_th
 
 def featToBool(data, feature_name):
     th = computeThreshold(data,feature_name)
-    tmp = (data[feature_name] > th).astype(int)
+    tmp = (data[feature_name] >= th).astype(int)
     return tmp
+
+for col in CONTINUOUS:
+    tr[col] = featToBool(tr,col)
