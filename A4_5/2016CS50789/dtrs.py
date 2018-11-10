@@ -324,22 +324,28 @@ while True:
         tree.append(l)
         heapq.heappush(leaves,(-l.split_info["split_info_gain"],newidx))
 
-title = "Nodes VS Accuracy [Without Pruning]"
+invert = False
+title = None
 if (part == 'a'):
     misc = get_build_accuracy(root,tree,levels,level_size,[train_dta,val_dta])
+    title = "Nodes VS Accuracy [Without Pruning]"
     np.savetxt(outfile,root.predict(test_dta),fmt="%i")
 
 if(part == 'b'):
     misc = prune(root,train_dta,val_dta,train_dta[:,0],val_dta[:,0])
     title = "Nodes VS Accuracy [With Pruning]"
     np.savetxt(outfile,root.predict(test_dta),fmt="%i")
+    invert = True
 
-accuracy =  (1 - misc[:,1:]/np.array([len(train_dta),len(val_dta)]))
+divider = np.array([len(train_dta),len(val_dta)])
+accuracy =  (1 - misc[:,1:]/divider)
 num_nodes = misc[:,0]
-plt.title(title)
 plt.plot(num_nodes,accuracy[:,0],label="train")
 plt.plot(num_nodes,accuracy[:,1],label="val")
+plt.legend(loc='upper left', frameon=False)
 plt.xlabel("Number of Nodes")
 plt.ylabel("Accuracy")
-plt.legend(loc='upper left', frameon=False)
+plt.title(title)
+if invert:
+    plt.gca().invert_xaxis()
 plt.savefig(plotfile)

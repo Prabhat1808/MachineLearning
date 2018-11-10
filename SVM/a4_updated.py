@@ -1,3 +1,9 @@
+
+# coding: utf-8
+
+# In[1]:
+
+
 import numpy as np
 from numpy import linalg
 import cvxopt
@@ -5,6 +11,8 @@ import cvxopt.solvers
 import pandas as pd
 from functools import reduce
 import matplotlib.pyplot as plt
+from numpy import cov
+import math
 
 TRAIN = "COL341_SVM_data/DHC_train.csv"
 TEST = "COL341_SVM_data/DHC_test.csv"
@@ -14,21 +22,28 @@ def LinearKernel(x1, x2,sigma=None):
     return np.dot(x1, x2)
 
 def GaussianKernel(x, y, sigma=1.0):
-    return np.exp(-linalg.norm(x-y)**2 / (2 * (sigma ** 2)))
+    return (math.exp(sigma*((linalg.norm(x-y))**2)))
+
+
+# In[2]:
+
 
 class SVM(object):
     def __init__(self,kernel,soft,gamma=0.01):
         self.kernel=kernel
         self.soft=soft
-        self.gamma = gamma
+        self.gamma = -1*gamma
 
-    def fit(self, TrainingInput, TrainingOutput):
-        self.n,self.m=TrainingInput.shape
-        Gram =np.array([[self.kernel(i,j) for j in TrainingInput] for i in TrainingInput])
+    def fit(self, X, y):
+        self.X_tr = X
+        self.y_tr = y
+        self.n,self.m=X.shape
+        Gram = np.array([[self.kernel(i,j,self.gamma) for j in X] for i in X])
+        print (np.sum(Gram))
 
-        P = cvxopt.matrix(np.outer(TrainingOutput,TrainingOutput) * Gram,(self.n,self.n),'d')
+        P = cvxopt.matrix(np.outer(y,y) * Gram,(self.n,self.n),'d')
         q = cvxopt.matrix(np.ones(self.n) * -1)
-        A = cvxopt.matrix(TrainingOutput, (1,self.n),'d')
+        A = cvxopt.matrix(y, (1,self.n),'d')
         b = cvxopt.matrix(0.0)
 
         g1 = np.diag(np.ones(self.n) * -1)
@@ -41,11 +56,12 @@ class SVM(object):
         model=cvxopt.solvers.qp(P, q, G, h, A, b)
 
         self.multipliers = np.ravel(model['x'])
+        print (self.multipliers)
         self.SV = np.array([x for x,y in enumerate(self.multipliers) if y > epslon])
 
         self.points = self.multipliers[self.SV]
-        self.X = TrainingInput[self.SV]
-        self.Y = TrainingOutput[self.SV]
+        self.X = X[self.SV]
+        self.Y = y[self.SV]
 
         self.weights=np.zeros(self.m)
         for i in range(len(self.points)):
@@ -58,17 +74,27 @@ class SVM(object):
 
         return True
 
+    def project(self,x):
+        xn = np.array([np.sum((x-xtr)**2) for xtr in self.X_tr])
+        return (np.dot((self.points*self.y_tr).transpose(),np.exp(self.gamma*xn)))
+    
     def predict(self,data):
         if(self.kernel == LinearKernel):
             return np.sign(np.dot(data, self.weights) + self.bias)
-        y_pred = np.zeros(len(data))
-        for i in range(len(data)):
-            sum = 0.0
-            for j in range(len(self.points)):
-                sum += self.points[j] * self.Y[j] * self.kernel(data[i],self.X[j],sigma=self.gamma)
-            y_pred[i] = sum
+        
+        y_pred = []
+        for i in data:
+            y = self.project(i)
+            print (y)
+            if y[0] > 0:
+                y_pred.append(1)
+            else:
+                y_pred.append(-1)
 
-        return y_pred + self.bias
+        return np.asarray(y_pred)
+
+
+# In[3]:
 
 
 tr_dat = pd.read_csv(TRAIN,header=None).values
@@ -79,19 +105,72 @@ y_tr = np.sign(tr_dat[:,:1] - 0.5)
 y_ts = np.sign(np.genfromtxt(TEST_LABELS) - 0.5)
 
 
-### BEST PARAMS ###
+# In[4]:
+
+
+# ## BEST PARAMS ###
 # SOFT = 0.01
 # model = SVM(LinearKernel,SOFT)
 # epslon = 0.00000001
 # model.fit(X_tr,y_tr)
 # y_pred = model.predict(X_ts)
 # print ("Accuracy = ", float(np.sum(y_ts==y_pred))/y_ts.shape[0])
-### BEST PARAMS ###
+# ## BEST PARAMS ###
 
-# SOFT = 100
+
+# In[5]:
+
+
+# SOFT = 1
 # gamma = 0.01
-# epslon = 0.0000001
+# epslon = 0.00001
+# print ("building Model")
 # model = SVM(GaussianKernel,SOFT,gamma=gamma)
 # model.fit(X_tr,y_tr)
+# print ("Done training")
 # y_pred = model.predict(X_ts)
 # print ("Accuracy = ", float(np.sum(y_ts==y_pred))/y_ts.shape[0])
+
+
+# In[6]:
+
+
+x_cov = cov(tr_dat[:,1:].T)
+u, lmb, v = linalg.svd(x_cov)
+X_tr_pca = np.dot(tr_dat[:,1:],u[:,:50])/255
+X_ts_pca = np.dot(ts_dat[:,1:],u[:,:50])/255
+
+
+# In[10]:
+
+
+## BEST PARAMS ###
+SOFT = 0.01
+model = SVM(LinearKernel,SOFT)
+epslon = 0.00000001
+model.fit(X_tr_pca,y_tr)
+y_pred = model.predict(X_ts_pca)
+print ("Accuracy = ", float(np.sum(y_ts==y_pred))/y_ts.shape[0])
+# BEST PARAMS ###
+
+
+# In[8]:
+
+
+SOFT = 1
+gamma = 0.01
+epslon = 0.00000001
+print ("building Model")
+model = SVM(GaussianKernel,SOFT,gamma=gamma)
+model.fit(X_tr_pca,y_tr)
+print ("Done training")
+y_pred = model.predict(X_ts_pca)
+print ("Accuracy = ", float(np.sum(y_ts==y_pred))/y_ts.shape[0])
+
+
+# In[9]:
+
+
+# print (y_pred)
+print (model.project(X_ts_pca[1]))
+
