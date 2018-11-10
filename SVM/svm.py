@@ -1,99 +1,76 @@
 import numpy as np
-import pandas as pd
 from numpy import linalg
 import cvxopt
 import cvxopt.solvers
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score
+import pandas as pd
+from functools import reduce
+import matplotlib.pyplot as plt
 
-TRAIN_DIR = "COL341_SVM_data/DHC_train.csv"
-TEST_DIR = "COL341_SVM_data/DHC_test.csv"
+TRAIN = "COL341_SVM_data/DHC_train.csv"
+TEST = "COL341_SVM_data/DHC_test.csv"
+TEST_LABELS = "COL341_SVM_data/orig_DHC_target_labels.txt"
 
-def linear_kernel(x1, x2):
+def LinearKernel(x1, x2,sigma=None):
     return np.dot(x1, x2)
 
+def GaussianKernel(x, y, sigma=1.0):
+    return np.exp(-linalg.norm(x-y)**2 / (2 * (sigma ** 2)))
 
 class SVM(object):
+    def __init__(self,kernel,soft):
+        self.kernel=kernel
+        self.soft=soft
 
-    def __init__(self, kernel=linear_kernel, C=None):
-        self.kernel = kernel
-        self.C = C
-        if self.C is not None: self.C = float(self.C)
+    def fit(self, TrainingInput, TrainingOutput):
+        self.n,self.m=TrainingInput.shape
+        Gram =np.array([[self.kernel(i,j) for j in TrainingInput] for i in TrainingInput])
 
-    def fit(self, X, y):
-        n_samples, n_features = X.shape
-
-        # Gram matrix
-        K = np.zeros((n_samples, n_samples))
-        for i in range(n_samples):
-            for j in range(n_samples):
-                K[i,j] = self.kernel(X[i], X[j])
-
-        P = cvxopt.matrix(np.outer(y,y) * K, (n_samples,n_samples),'d')
-        q = cvxopt.matrix(np.ones(n_samples) * -1)
-        A = cvxopt.matrix(y, (1,n_samples),'d')
-        # A = A.astype(double)
-        # A = matrix(A,(1,m),'d')
+        P = cvxopt.matrix(np.outer(TrainingOutput,TrainingOutput) * Gram,(self.n,self.n),'d')
+        q = cvxopt.matrix(np.ones(self.n) * -1)
+        A = cvxopt.matrix(TrainingOutput, (1,self.n),'d')
         b = cvxopt.matrix(0.0)
 
+        g1 = np.diag(np.ones(self.n) * -1)
+        g2 = np.identity(self.n)
+        G = cvxopt.matrix(np.vstack((g1, g2)))
+        H1 = np.zeros(self.n)
+        H2 = np.ones(self.n) * self.soft
+        h = cvxopt.matrix(np.hstack((H1, H2)))
 
-        tmp1 = np.diag(np.ones(n_samples) * -1)
-        tmp2 = np.identity(n_samples)
-        G = cvxopt.matrix(np.vstack((tmp1, tmp2)))
-        tmp1 = np.zeros(n_samples)
-        tmp2 = np.ones(n_samples) * self.C
-        h = cvxopt.matrix(np.hstack((tmp1, tmp2)))
+        model=cvxopt.solvers.qp(P, q, G, h, A, b)
 
-        # solve QP problem
-        solution = cvxopt.solvers.qp(P, q, G, h, A, b)
+        self.multipliers = np.ravel(model['x'])
+        self.SV = np.array([x for x,y in enumerate(self.multipliers) if y > epslon])
 
-        # Lagrange multipliers
-        a = np.ravel(solution['x'])
+        self.points = self.multipliers[self.SV]
+        self.X = TrainingInput[self.SV]
+        self.Y = TrainingOutput[self.SV]
 
-        # Support vectors have non zero lagrange multipliers
-        sv = a > 1e-5
-        ind = np.arange(len(a))[sv]
-        self.a = a[sv]
-        self.sv = X[sv]
-        self.sv_y = y[sv]
-        print("%d support vectors out of %d points" % (len(self.a), n_samples))
+        self.weights=np.zeros(self.m)
+        for i in range(len(self.points)):
+            self.weights += self.points[i]*self.X[i]*self.Y[i]
 
-        # Intercept
-        self.b = 0.0
-        for n in range(len(self.a)):
-            self.b += self.sv_y[n]
-            self.b -= np.sum(self.a * self.sv_y * K[ind[n],sv])
-        self.b /= len(self.a)
+        self.bias=0
+        for i in range(len(self.points)):
+            self.bias -= np.dot(self.weights,self.X[i]) - self.Y[i]
+        self.bias= self.bias/self.SV.shape[0]
 
-        # Weight vector
-        if self.kernel == linear_kernel:
-            self.w = np.zeros(n_features)
-            for n in range(len(self.a)):
-                self.w += self.a[n] * self.sv_y[n] * self.sv[n]
-        else:
-            self.w = None
+        return True
 
-    def project(self, X):
-        if self.w is not None:
-            return np.dot(X, self.w) + self.b
-        else:
-            y_predict = np.zeros(len(X))
-            for i in range(len(X)):
-                s = 0
-                for a, sv_y, sv in zip(self.a, self.sv_y, self.sv):
-                    s += a * sv_y * self.kernel(X[i], sv)
-                y_predict[i] = s
-            return y_predict + self.b
+    def predict(self,data):
+            return np.sign(np.dot(data, self.weights) + self.bias)
 
-    def predict(self, X):
-        return np.sign(self.project(X))
 
-y_tr = np.sign(pd.read_csv(TRAIN_DIR,header=None, usecols=[0]).values-0.5)
-X_tr= pd.read_csv(TRAIN_DIR,header=None, usecols=range(1,32*32+1)).values/255
+tr_dat = pd.read_csv(TRAIN,header=None).values
+ts_dat = pd.read_csv(TEST,header=None).values
+X_tr = tr_dat[:,1:]/255
+X_ts = ts_dat[:,1:]/255
+y_tr = np.sign(tr_dat[:,:1] - 0.5)
+y_ts = np.sign(np.genfromtxt(TEST_LABELS) - 0.5)
 
-X_tr, X_ts, y_tr, y_ts = train_test_split(X_tr,y_tr)
-
-model = SVM(C=0.1)
+SOFT = 0.001
+model = SVM(LinearKernel,SOFT)
+epslon = 0.0000001
 model.fit(X_tr,y_tr)
 y_pred = model.predict(X_ts)
-print (accuracy_score(y_pred,y_ts))
+print ("Accuracy = ", float(np.sum(y_ts==y_pred))/y_ts.shape[0])
