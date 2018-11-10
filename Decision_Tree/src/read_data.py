@@ -19,14 +19,14 @@ sex_l = "Female, Male".split(", ")
 nc_l = "United-States, Cambodia, England, Puerto-Rico, Canada, Germany, Outlying-US(Guam-USVI-etc), India, Japan, Greece, South, China, Cuba, Iran, Honduras, Philippines, Italy, Poland, Jamaica, Vietnam, Mexico, Portugal, Ireland, France, Dominican-Republic, Laos, Ecuador, Taiwan, Haiti, Columbia, Hungary, Guatemala, Nicaragua, Scotland, Thailand, Yugoslavia, El-Salvador, Trinadad&Tobago, Peru, Hong, Holand-Netherlands".split(", ")
 encode = {
     "rich"   : {"0":0,"1":1},
-    "wc"     : {wc_l[i].lstrip().rstrip():i for i in range(len(wc_l))},
-    "edu"    : {edu_l[i].lstrip().rstrip():i for i in range(len(edu_l))},
-    "mar"    : {mar_l[i].lstrip().rstrip():i for i in range(len(mar_l))},
-    "occ"    : {occ_l[i].lstrip().rstrip():i for i in range(len(occ_l))},
-    "rel"    : {rel_l[i].lstrip().rstrip():i for i in range(len(rel_l))},
-    "race"   : {race_l[i].lstrip().rstrip():i for i in range(len(race_l))},
-    "sex"    : {sex_l[i].lstrip().rstrip():i for i in range(len(sex_l))},
-    "nc"     : {nc_l[i].lstrip().rstrip():i for i in range(len(nc_l))},
+    "wc"     : {wc_l[i]:i for i in range(len(wc_l))},
+    "edu"    : {edu_l[i]:i for i in range(len(edu_l))},
+    "mar"    : {mar_l[i]:i for i in range(len(mar_l))},
+    "occ"    : {occ_l[i]:i for i in range(len(occ_l))},
+    "rel"    : {rel_l[i]:i for i in range(len(rel_l))},
+    "race"   : {race_l[i]:i for i in range(len(race_l))},
+    "sex"    : {sex_l[i]:i for i in range(len(sex_l))},
+    "nc"     : {nc_l[i]:i for i in range(len(nc_l))},
     }
 
 def medians(file):
@@ -47,11 +47,11 @@ def medians(file):
             continue
         l = [x.lstrip().rstrip() for x in row]
         age.append(int(l[0]));
-        fnlwgt.append(int(l[3]));
-        edun.append(int(l[5]));
-        capg.append(int(l[11]));
-        capl.append(int(l[12]));
-        hpw.append(int(l[13]));
+        fnlwgt.append(int(l[2]));
+        edun.append(int(l[4]));
+        capg.append(int(l[10]));
+        capl.append(int(l[11]));
+        hpw.append(int(l[12]));
     fin.close()
     return(statistics.median(age),statistics.median(fnlwgt),statistics.median(edun),statistics.median(capg),statistics.median(capl),statistics.median(hpw))
 
@@ -78,22 +78,18 @@ def preprocess(file,binarize=True):
         t = [0 for i in range(15)]
 
         # Encode the categorical attributes
-        # print (encode["rich"])
-        # print (encode["rich"].keys())
-        t[0] = encode["rich"][str(l[0])]
-        t[2] = encode["wc"][l[2]]
-        t[4] = encode["edu"][l[4]]
-        t[6] = encode["mar"][l[6]]; t[7] = encode["occ"][l[7]]; t[8] = encode["rel"][l[8]]
-        t[9] = encode["race"][l[9]]; t[10] = encode["sex"][l[10]]; t[14] = encode["nc"][l[14]]
+        t[0] = encode["rich"][l[-1]]; t[2] = encode["wc"][l[1]]; t[4] = encode["edu"][l[3]]
+        t[6] = encode["mar"][l[5]]; t[7] = encode["occ"][l[6]]; t[8] = encode["rel"][l[7]]
+        t[9] = encode["race"][l[8]]; t[10] = encode["sex"][l[9]]; t[14] = encode["nc"][l[13]]
 
         # Binarize the numerical attributes based on median.
         # Modify this section to read the file in part c where you split the continuos attributes baed on dynamic median values.
         if binarize:
-            t[1] = float(l[1])>agem; t[3] = float(l[3])>fnlwgtm; t[5] = float(l[5])>edunm;
-            t[11] = float(l[11])>capgm; t[12] = float(l[12])>caplm; t[13] = float(l[13])>hpwm;
+            t[1] = float(l[0])>agem; t[3] = float(l[2])>fnlwgtm; t[5] = float(l[4])>edunm;
+            t[11] = float(l[10])>capgm; t[12] = float(l[11])>caplm; t[13] = float(l[12])>hpwm;
         else:
-            t[1] = l[1]; t[3] = l[3]; t[5] = l[5];
-            t[11] = l[11]; t[12] = l[12]; t[13] = l[13];
+            t[1] = l[0]; t[3] = l[2]; t[5] = l[4];
+            t[11] = l[10]; t[12] = l[11]; t[13] = l[12];
 
         # Convert some of the booleans to ints
         data.append([int(x) for x in t])

@@ -87,7 +87,7 @@ def candidateThresholds(data, feature_name):
             th.add((vals[i]+vals[i+1])/2)
     return list(th)
 
-def computeThreshold(data, feature_name):
+def computeThreshold(data, feature_name)test_dta:
     candidates = candidateThresholds(data,feature_name)
     # print ("Candidates : ",candidates)
     best_th = 0.0
@@ -102,7 +102,13 @@ def computeThreshold(data, feature_name):
 def featToBool(data, feature_name):
     th = computeThreshold(data,feature_name)
     tmp = (data[feature_name] >= th).astype(int)
-    return tmp
+    return th
 
+thresholds = {}
 for col in CONTINUOUS:
-    tr[col] = featToBool(tr,col)
+    thresholds[col] = computeThreshold(tr,col)
+    tr[col] = (tr[col] >= thresholds[col]).astype(int)
+    val[col] = (val[col] >= thresholds[col]).astype(int)
+
+dat_tr = np.array(tr,dtype=np.int64)
+dat_val = np.array(val,dtype=np.int64)
