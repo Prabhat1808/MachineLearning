@@ -4,9 +4,177 @@
 # In[1]:
 
 
-# from read_data import *
-from node import Node
 import heapq
+import numpy as np
+
+
+class Node:
+    def __init__(self,train_data,numerical_attr,depth=0):
+        self.train_data = train_data
+        self.isLeafNode = True
+        self.numerical_attr=numerical_attr
+        self.children = {}
+        self.split_attr = None
+        self.split_val = None # For numerical attr
+        self.info_gain = 0
+        self.majority = None
+        self.depth=depth
+
+        self.populate_majority()
+        self.populate_split_attr()
+
+    # Populate which of the two classes (0,1) is majority for this node
+    def populate_majority(self):
+        self.majority = 1 if ((self.train_data[:,0].mean())>0.5) else 0
+
+    # Populate the attr which maximizes info_gain
+    # sets the field info_gain,split_attr, split_attr_val
+    def populate_split_attr(self):
+        for i in range(1,self.train_data.shape[1]):
+            if i in self.numerical_attr:
+                split_val = self.calc_split_val(self.train_data,i)
+            else:
+                split_val = None
+            gain = self.attr_info_gain(i,split_val)
+
+            if(gain >= self.info_gain):
+                self.info_gain = gain
+                self.split_attr = i
+                self.split_val = split_val
+
+    # returns a list of np indices on which to split the data
+    def split_idx(self,data,idx,split_val=None):
+        if split_val != None:
+            split_idx = [np.where(data[:,idx]<=split_val),np.where(data[:,idx]>split_val)]
+        else:
+            min_val = np.min(data[:,idx])
+            max_val = np.max(data[:,idx])
+            split_idx = []
+            for val in range(min_val,max_val+1):
+                split_idx.append(np.where(data[:,idx]==val))
+        return split_idx
+
+    # returns a list of data split on the idx given
+    def split_data(self,data,idx,split_val=None):
+        split_idx = self.split_idx(data,idx,split_val)
+        splits = []
+        num_nonzero = 0
+        for idxs in split_idx:
+            split = data[idxs]
+            splits.append(split)
+            num_nonzero += (1 if len(split)>0 else 0)
+        if(num_nonzero < 2):
+            # No splitting can be done on this index
+            return None
+        return splits
+
+    # Calculate info gain w.r.t to an attribute for this node
+    def attr_info_gain(self,attr_idx,split_val=None):
+        splits = self.split_data(self.train_data,attr_idx,split_val)
+        if splits==None:
+            # No info gain as splitting does not result in multiple leaves
+            return -1
+        info_gain = self.calc_entropy(self.train_data)
+        for i in range(len(splits)):
+            if (len(splits[i])==0):
+                continue
+            prob = len(splits[i])/len(self.train_data)
+            info_gain -= (prob*self.calc_entropy(splits[i]))
+        return info_gain
+
+    # calculates the median of the numericall attr for this node
+    def calc_split_val(self,data,attr_idx):
+        return np.median(data[:,attr_idx])
+
+    # calculate number of misclassified examples
+    def calc_misc(self,pred,label):
+        return (len(pred) - np.count_nonzero(pred==label))
+    # predict the label on this data
+    def predict(self,data):
+        pred = np.full(len(data),self.majority)
+
+        # number of misclassified exampled if this node was pruned
+        self.misc_prune = self.calc_misc(pred,data[:,0])
+
+        if(not self.isLeafNode):
+            # if not leaf node then recursively call children to calculate prediction
+            split_idx = self.split_idx(data,self.split_attr,self.split_val)
+            for idx in split_idx:
+                if len(idx[0])==0:
+                    continue
+                split = data[idx]
+                split_val = split[0][self.split_attr]
+                if(self.split_attr in self.numerical_attr):
+                    split_val = 1 if (split_val>self.split_val) else 0
+                if split_val not in self.children:
+    #                 # This split was not present in tranining data
+    #                 print("WARNING: ")
+    #                 print(split[0])
+    #                 print("not recognizable by : ",self.split_attr)
+    #                 print(self.children.keys())
+    #                 print("---------------------")
+                    continue
+                preds = self.children[split_val].predict(split)
+                pred[idx]=preds
+
+        # number of misclassified exampled if this node fully grown
+        self.misc_full = self.calc_misc(pred,data[:,0])
+        self.gain_prune = self.misc_full - self.misc_prune
+
+        return pred
+
+    # Grows this node and returns an array of children
+    # Should only be called after populate_split_attr
+    def grow_tree(self):
+        if (np.all(self.train_data[:,0]==self.train_data[0][0])):
+            # all the labels are same and hence we should stop
+#             print("exiting because all labels are same, depth: {}".format(self.depth))
+            self.isLeafNode = True
+            return []
+        if((self.split_attr == None)):
+#             print("exiting because no attribute to split on, depth: {}".format(self.depth))
+            self.isLeafNode=True
+            return []
+
+        self.isLeafNode = False
+        split_attr = self.split_attr
+        splits = self.split_data(self.train_data,split_attr,self.split_val)
+        if splits==None:
+            self.isLeafNode=True
+            return []
+        node_list = []
+        for split in splits:
+            if(len(split)==0):
+                continue
+            new_node = Node(split,self.numerical_attr,self.depth+1)
+            if (self.split_val != None):
+                category = 1 if (split[0][split_attr]>self.split_val) else 0
+            else:
+                category = split[0][split_attr]
+            self.children[category] = new_node
+            node_list.append(new_node)
+        return node_list
+
+    # Calculates the entropy of the given sample
+    # Assumes that the first column is the label
+    def calc_entropy(self,data):
+        num_pos = np.count_nonzero(data[:,0]==1)
+        num_neg = len(data)-num_pos
+        counts = [num_pos,num_neg]
+        ent = 0
+        for x in counts:
+            if x > 0:
+                prob = x/len(data)
+                ent += (prob*np.log(prob))
+        return -ent
+    def get_subtree(self):
+        if self.isLeafNode:
+            return [self]
+        subtree = [self]
+        for ch in self.children.keys():
+            subtree += self.children[ch].get_subtree()
+        return subtree
+
 import matplotlib.pyplot as plt
 from sklearn.tree import DecisionTreeClassifier as DTC
 from sklearn.ensemble import RandomForestClassifier as RFC
@@ -16,115 +184,111 @@ import numpy as np
 import math
 from sklearn import tree
 
-model = tree.DecisionTreeClassifier()
-TR_DIR = "COL341_DecisionTree_data/train.csv"
-VAL_DIR = "COL341_DecisionTree_data/valid.csv"
-TS_DIR = "COL341_DecisionTree_data/test.csv"
-DISCRETE = ['Work Class','Education','Marital Status','Occupation','Relationship','Race','Sex','Native Country']
-CONTINUOUS = ['Age','Fnlwgt','Education Number','Capital Gain','Capital Loss','Hour per Week']
+"""
+This file gives you the code to read the data into numpy arrays to get you startedf for part (a).
+"""
+from __future__ import print_function
+import time,sys,statistics,csv
+import numpy as np
 
-tr = pd.read_csv(TR_DIR)
-val = pd.read_csv(VAL_DIR)
-tr_cols = tr.columns
-val_cols = val.columns
+## The possible attributes in the data with the prediction at index 0. Smaller names for brevity.
+attributes = ["rich","age","wc","fnlwgt","edu","edun","mar","occ","rel","race","sex","capg","canpl","hpw","nc"]
 
-for i in range(len(tr_cols)):
-    tr.rename(columns={tr_cols[i]:tr_cols[i].lstrip().rstrip()},inplace=True)
+## Get the encoding of the csv file by replacing each categorical attribute value by its index.
+wc_l = "Private, Self-emp-not-inc, Self-emp-inc, Federal-gov, Local-gov, State-gov, Without-pay, Never-worked".split(", ")
+edu_l = "Bachelors, Some-college, 11th, HS-grad, Prof-school, Assoc-acdm, Assoc-voc, 9th, 7th-8th, 12th, Masters, 1st-4th, 10th, Doctorate, 5th-6th, Preschool".split(", ")
+mar_l = "Married-civ-spouse, Divorced, Never-married, Separated, Widowed, Married-spouse-absent, Married-AF-spouse".split(", ")
+occ_l = "Tech-support, Craft-repair, Other-service, Sales, Exec-managerial, Prof-specialty, Handlers-cleaners, Machine-op-inspct, Adm-clerical, Farming-fishing, Transport-moving, Priv-house-serv, Protective-serv, Armed-Forces".split(", ")
+rel_l = "Wife, Own-child, Husband, Not-in-family, Other-relative, Unmarried".split(", ")
+race_l = "White, Asian-Pac-Islander, Amer-Indian-Eskimo, Other, Black".split(", ")
+sex_l = "Female, Male".split(", ")
+nc_l = "United-States, Cambodia, England, Puerto-Rico, Canada, Germany, Outlying-US(Guam-USVI-etc), India, Japan, Greece, South, China, Cuba, Iran, Honduras, Philippines, Italy, Poland, Jamaica, Vietnam, Mexico, Portugal, Ireland, France, Dominican-Republic, Laos, Ecuador, Taiwan, Haiti, Columbia, Hungary, Guatemala, Nicaragua, Scotland, Thailand, Yugoslavia, El-Salvador, Trinadad&Tobago, Peru, Hong, Holand-Netherlands".split(", ")
+encode = {
+    "rich"   : {"0":0,"1":1},
+    "wc"     : {wc_l[i]:i for i in range(len(wc_l))},
+    "edu"    : {edu_l[i]:i for i in range(len(edu_l))},
+    "mar"    : {mar_l[i]:i for i in range(len(mar_l))},
+    "occ"    : {occ_l[i]:i for i in range(len(occ_l))},
+    "rel"    : {rel_l[i]:i for i in range(len(rel_l))},
+    "race"   : {race_l[i]:i for i in range(len(race_l))},
+    "sex"    : {sex_l[i]:i for i in range(len(sex_l))},
+    "nc"     : {nc_l[i]:i for i in range(len(nc_l))},
+    }
 
-for i in range(len(val_cols)):
-    val.rename(columns={val_cols[i]:val_cols[i].lstrip().rstrip()},inplace=True)
+def medians(file):
+    """
+    Given a csv file, find the medians of the categorical attributes for the whole data.
+    params(1):
+        file : string : the name of the file
+    outputs(6):
+        median values for the categorical columns
+    """
+    fin = open(file,"r")
+    reader = csv.reader(fin)
+    age, fnlwgt, edun, capg, capl, hpw = ([] for i in range(6))
+    total = 0
+    for row in reader:
+        total+=1
+        if(total==1):
+            continue
+        l = [x.lstrip().rstrip() for x in row]
+        age.append(int(l[0]));
+        fnlwgt.append(int(l[2]));
+        edun.append(int(l[4]));
+        capg.append(int(l[10]));
+        capl.append(int(l[11]));
+        hpw.append(int(l[12]));
+    fin.close()
+    return(statistics.median(age),statistics.median(fnlwgt),statistics.median(edun),statistics.median(capg),statistics.median(capl),statistics.median(hpw))
 
-for var in DISCRETE:
-    tr[var] = tr[var].astype('category')
-    tr[var] = tr[var].cat.codes
-    val[var] = val[var].astype('category')
-    val[var] = val[var].cat.codes
+def preprocess(file,binarize=True):
+    """
+    Given a file, read its data by encoding categorical attributes and binarising continuos attributes based on median.
+    params(1):
+        file : string : the name of the file
+    outputs(6):
+        2D numpy array with the data
+    """
+    # Calculate the medians
+    agem,fnlwgtm,edunm,capgm,caplm,hpwm = medians(file)
+    fin = open(file,"r")
+    reader = csv.reader(fin)
+    data = []
+    total = 0
+    for row in reader:
+        total+=1
+        # Skip line 0 in the file
+        if(total==1):
+            continue
+        l = [x.lstrip().rstrip() for x in row]
+        t = [0 for i in range(15)]
 
-def calcEntropyLabels(labels):
-    val_count = (labels.value_counts()).values
-    # print (val_count)
-    # print ('YOOYOO')
-    tot = sum(val_count)
-    count = len(val_count)
-    entropy = 0.0
-    # print (tot)
-    for val in val_count:
-        tmp = (val/tot)
-        entropy -= tmp*math.log(tmp,2)
-    return entropy
+        # Encode the categorical attributes
+        t[0] = encode["rich"][l[-1]]; t[2] = encode["wc"][l[1]]; t[4] = encode["edu"][l[3]]
+        t[6] = encode["mar"][l[5]]; t[7] = encode["occ"][l[6]]; t[8] = encode["rel"][l[7]]
+        t[9] = encode["race"][l[8]]; t[10] = encode["sex"][l[9]]; t[14] = encode["nc"][l[13]]
 
-def calcEntropyFeatures(column, threshold):
-    n = column.shape[0]
-    less = sum(column < threshold)
-    more = n - less
-    entropy = 0.0
-    entropy -= (less/n)*math.log((less/n),2)
-    entropy -= (more/n)*math.log((more/n),2)
-    return entropy
+        # Binarize the numerical attributes based on median.
+        # Modify this section to read the file in part c where you split the continuos attributes baed on dynamic median values.
+        if binarize:
+            t[1] = float(l[0])>agem; t[3] = float(l[2])>fnlwgtm; t[5] = float(l[4])>edunm;
+            t[11] = float(l[10])>capgm; t[12] = float(l[11])>caplm; t[13] = float(l[12])>hpwm;
+        else:
+            t[1] = l[0]; t[3] = l[2]; t[5] = l[4];
+            t[11] = l[10]; t[12] = l[11]; t[13] = l[12];
 
-def infoGain(data, feature_name, threshold):
-    n = data.shape[0]
-    less = data.loc[data[feature_name] < threshold]
-    n_less = less.shape[0]
-    more = data.loc[data[feature_name] >= threshold]
-    n_more = more.shape[0]
-    gain = calcEntropyLabels(data['Rich?'])
-    if(n_less != 0):
-        # print ("Caaling function less")
-        # print (threshold)
-        # print (n_less)
-        gain -= (n_less/n)*calcEntropyLabels(less['Rich?'])
-    if(n_more != 0):
-        # print ("Caaling function more")
-        # print (threshold)
-        # print (n_more)
-        gain -= (n_more/n)*calcEntropyLabels(more['Rich?'])
-    return gain
+        # Convert some of the booleans to ints
+        data.append([int(x) for x in t])
 
-def gainRatio(data, feature_name, threshold):
-    return (infoGain(data,feature_name,threshold)/calcEntropyFeatures(data[feature_name],threshold))
+    return np.array(data,dtype=np.int64)
 
-def candidateThresholds(data, feature_name):
-    sorted = (data[['Rich?',feature_name]].sort_values([feature_name], ascending=True)).values
-    # df1 = df[['a','b']]
-    # print ("YOOYOO")
-    # print (sorted)
-    labels = sorted[:,0]
-    # print (labels)
-    vals = sorted[:,1]
-    # print (vals)
-    th = set()
-    for i in range(len(labels)-2):
-        if(labels[i]!=labels[i+1]):
-            # print ('Diff')
-            th.add((vals[i]+vals[i+1])/2)
-    return list(th)
+## Read the data
+# train_data = preprocess("train.csv")
+# valid_data = preprocess("valid.csv")
+# test_data = preprocess("test.csv")
 
-def computeThreshold(data, feature_name):
-    candidates = candidateThresholds(data,feature_name)
-    # print ("Candidates : ",candidates)
-    best_th = 0.0
-    max_gain = 0.0
-    for th in candidates:
-        i = infoGain(data, feature_name, th)
-        if i > max_gain:
-            max_gain = i
-            best_th = th
-    return best_th
+# print("The sizes are ","Train:",len(train_data),", Validation:",len(valid_data),", Test:",len(test_data))
 
-def featToBool(data, feature_name):
-    th = computeThreshold(data,feature_name)
-    tmp = (data[feature_name] >= th).astype(int)
-    return th
-
-thresholds = {}
-for col in CONTINUOUS:
-    thresholds[col] = computeThreshold(tr,col)
-    tr[col] = (tr[col] >= thresholds[col]).astype(int)
-    val[col] = (val[col] >= thresholds[col]).astype(int)
-
-train_dta = np.array(tr,dtype=np.int64)
-val_dta = np.array(val,dtype=np.int64)
 
 # In[2]:
 
@@ -223,9 +387,9 @@ VAL="../dataset/valid.csv"
 
 binarize=True
 # binarize=True
-# train_dta = preprocess(TRAIN,binarize)
+train_dta = preprocess(TRAIN,binarize)
 # test_dta = preprocess(TEST,binarize)
-# val_dta = preprocess(VAL,binarize)
+val_dta = preprocess(VAL,binarize)
 # train_dta = train_dta[np.where(train_dta[:,0]==0)]
 # testlabels = test_dta[:,0]
 trainlabels = train_dta[:,0]
